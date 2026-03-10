@@ -1,77 +1,145 @@
-import numpy as np
-from sklearn.preprocessing import LabelBinarizer, OneHotEncoder
+import pickle
+from sklearn.metrics import fbeta_score, precision_score, recall_score
+from sklearn.ensemble import RandomForestClassifier
+from ml.data import process_data
+
+# Optional: implement hyperparameter tuning.
+def train_model(X_train, y_train):
+    """
+    Trains a machine learning model and returns it.
+
+    Inputs
+    ------
+    X_train : np.array
+        Training data.
+    y_train : np.array
+        Labels.
+    Returns
+    -------
+    model
+        Trained machine learning model.
+    """
+    
+    # Initialize the model
+    model = RandomForestClassifier(random_state=42)
+    
+    # Train the model
+    model.fit(X_train, y_train)
+
+    return model
 
 
-def process_data(
-    X, categorical_features=[], label=None, training=True, encoder=None, lb=None
+def compute_model_metrics(y, preds):
+    """
+    Validates the trained machine learning model using precision, recall, and F1.
+
+    Inputs
+    ------
+    y : np.array
+        Known labels, binarized.
+    preds : np.array
+        Predicted labels, binarized.
+    Returns
+    -------
+    precision : float
+    recall : float
+    fbeta : float
+    """
+    fbeta = fbeta_score(y, preds, beta=1, zero_division=1)
+    precision = precision_score(y, preds, zero_division=1)
+    recall = recall_score(y, preds, zero_division=1)
+    return precision, recall, fbeta
+
+
+def inference(model, X):
+    """ Run model inferences and return the predictions.
+
+    Inputs
+    ------
+    model : ???
+        Trained machine learning model.
+    X : np.array
+        Data used for prediction.
+    Returns
+    -------
+    preds : np.array
+        Predictions from the model.
+    """
+    preds = model.predict()
+
+    return preds
+    
+
+def save_model(model, path):
+    """ Serializes model to a file.
+
+    Inputs
+    ------
+    model
+        Trained machine learning model or OneHotEncoder.
+    path : str
+        Path to save pickle file.
+    """
+    with open(path, "wb") as f:
+        pickle.dump(model, f)
+    
+
+def load_model(path):
+    """ Loads pickle file from `path` and returns it."""
+    with open(path, "rb") as f:
+        model = pickle.load()
+    
+    return model
+
+
+def performance_on_categorical_slice(
+    data, column_name, slice_value, categorical_features, label, encoder, lb, model
 ):
-    """ Process the data used in the machine learning pipeline.
+    """ Computes the model metrics on a slice of the data specified by a column name and
 
     Processes the data using one hot encoding for the categorical features and a
     label binarizer for the labels. This can be used in either training or
     inference/validation.
 
-    Note: depending on the type of model used, you may want to add in functionality that
-    scales the continuous data.
-
     Inputs
     ------
-    X : pd.DataFrame
+    data : pd.DataFrame
         Dataframe containing the features and label. Columns in `categorical_features`
-    categorical_features: list[str]
+    column_name : str
+        Column containing the sliced feature.
+    slice_value : str, int, float
+        Value of the slice feature.
+    categorical_features: list
         List containing the names of the categorical features (default=[])
     label : str
         Name of the label column in `X`. If None, then an empty array will be returned
         for y (default=None)
-    training : bool
-        Indicator if training mode or inference/validation mode.
     encoder : sklearn.preprocessing._encoders.OneHotEncoder
         Trained sklearn OneHotEncoder, only used if training=False.
     lb : sklearn.preprocessing._label.LabelBinarizer
         Trained sklearn LabelBinarizer, only used if training=False.
+    model : ???
+        Model used for the task.
 
     Returns
     -------
-    X : np.array
-        Processed data.
-    y : np.array
-        Processed labels if labeled=True, otherwise empty np.array.
-    encoder : sklearn.preprocessing._encoders.OneHotEncoder
-        Trained OneHotEncoder if training is True, otherwise returns the encoder passed
-        in.
-    lb : sklearn.preprocessing._label.LabelBinarizer
-        Trained LabelBinarizer if training is True, otherwise returns the binarizer
-        passed in.
+    precision : float
+    recall : float
+    fbeta : float
+
     """
 
-    if label is not None:
-        y = X[label]
-        X = X.drop([label], axis=1)
-    else:
-        y = np.array([])
+    data_slice = data[data[column_name] == slice_value]
 
-    X_categorical = X[categorical_features].values
-    X_continuous = X.drop(*[categorical_features], axis=1)
+    X_slice, y_slice, _, _ = process_data(
+        data_slice,
+        categorical_features=categorical_features,
+        label=label,
+        training=False,
+        encoder=encoder,
+        lb=lb
+    )
 
-    if training is True:
-        encoder = OneHotEncoder(sparse_output=False, handle_unknown="ignore")
-        lb = LabelBinarizer()
-        X_categorical = encoder.fit_transform(X_categorical)
-        y = lb.fit_transform(y.values).ravel()
-    else:
-        X_categorical = encoder.transform(X_categorical)
-        try:
-            y = lb.transform(y.values).ravel()
-        # Catch the case where y is None because we're doing inference.
-        except AttributeError:
-            pass
-
-    X = np.concatenate([X_continuous, X_categorical], axis=1)
-    return X, y, encoder, lb
-
-def apply_label(inference):
-    """ Convert the binary label in a single inference sample into string output."""
-    if inference[0] == 1:
-        return ">50K"
-    elif inference[0] == 0:
-        return "<=50K"
+    preds = inference(model, X_slice) 
+    precision, recall, fbeta = compute_model_metrics(y_slice, preds)
+    return precision, recall, fbeta
