@@ -1,9 +1,9 @@
 # Model Card
 
 ## Model Details
-This model predicts whether an individual's income exceeds $50K per year using demographic and     employment-related features from the U.S. Census dataset. The model is implemented using Python and the scikit-learn machine learning library.
+This model predicts if an individual's income exceeds $50K per year using demographic and employment-related features from the U.S. Census dataset. The model is implemented using Python and the scikit-learn machine learning library.
 
-A RandomForestClassifier algorithm is used for training due to its strong performance on tabular datasets and its ability to capture nonlinear relationships between variables. The model is trained on processed data where categorical features are transformed using one-hot encoding and the target label is binarized.
+A RandomForestClassifier algorithm is used for training data due to its strong performance on tabular datasets and its ability to capture nonlinear relationships between variables. The model is trained on processed data where categorical features are transformed using one-hot encoding and the target label is binarized.
 
 The model is part of a machine learning pipeline deployed through a FastAPI application to support scalable inference.
 
@@ -15,7 +15,7 @@ The model is intended for educational and experimental purposes, specifically to
 This model should not be used for real-world decision making related to employment, hiring, financial approval, or policy decisions without significant additional validation, fairness analysis, and monitoring.
 
 ## Training Data
-The training data comes from the UCI Census Income dataset, which contains demographic and employment information derived from the 1994 U.S. Census database.
+The training data comes from the Census Income dataset, which contains demographic and employment information derived from the U.S. Census database.
 
 Features include attributes such as:
 - Age
